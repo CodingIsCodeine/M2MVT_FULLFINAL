@@ -4,6 +4,7 @@
 """DAAD-X multi-view video loader for ADM/M2MVT reproduction."""
 
 import csv
+from operator import index
 import os
 import random
 
@@ -244,6 +245,7 @@ class Daad(torch.utils.data.Dataset):
             frames = frames[[2, 1, 0], :, :, :]
         return frames
 
+
     def __getitem__(self, index):
         short_cycle_idx = None
         if isinstance(index, tuple):
@@ -297,10 +299,10 @@ class Daad(torch.utils.data.Dataset):
 
                 label = self._labels[index]
                 metadata = {
-                    "video_id": self._video_ids[index],
-                    "time_idx": time_idx,
+                    "video_id": self._video_ids[index]
                 }
-                return inputs, label, index, time_idx, metadata
+
+                return inputs, label, index, metadata
 
             except Exception as err:
                 logger.warning(
