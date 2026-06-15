@@ -4,7 +4,7 @@
 
 import math
 
-import torch
+import torch    
 import torch.nn as nn
 from torch.nn.init import trunc_normal_
 
@@ -25,6 +25,7 @@ _ALIASES = {
     "egoview": "ariagaze",
     "aria": "ariagaze",
     "gaze": "ariagaze",
+    "aria_gaze": "ariagaze",
 }
 
 
