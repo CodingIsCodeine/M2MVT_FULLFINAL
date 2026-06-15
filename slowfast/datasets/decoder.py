@@ -495,6 +495,7 @@ def decode(
     assert clip_idx >= -1, "Not valied clip_idx {}".format(clip_idx)
     assert len(sampling_rate) == len(num_frames)
     num_decode = len(num_frames)
+    start_end_delta_time = None
     num_frames_orig = num_frames
     if num_decode > 1 and temporally_rnd_clips:
         ind_clips = np.random.permutation(num_decode)
@@ -507,10 +508,11 @@ def decode(
             assert (
                 min_delta == -math.inf and max_delta == math.inf
             ), "delta sampling not supported in pyav"
+
             frames_decoded, fps, decode_all_video = pyav_decode(
                 container,
-                sampling_rate,
-                num_frames,
+                sampling_rate[0],
+                num_frames[0],
                 clip_idx,
                 num_clips_uniform,
                 target_fps,
@@ -540,10 +542,15 @@ def decode(
             raise NotImplementedError("Unknown decoding backend {}".format(backend))
     except Exception as e:
         print("Failed to decode by {} with exception: {}".format(backend, e))
+        import traceback
+        traceback.print_exc()
         return None, None, None
 
     # Return None if the frames was not decoded successfully.
-    if frames_decoded is None or None in frames_decoded:
+    if frames_decoded is None:
+        return None, None, None
+
+    if isinstance(frames_decoded, list) and any(x is None for x in frames_decoded):
         return None, None, None
 
     if not isinstance(frames_decoded, list):

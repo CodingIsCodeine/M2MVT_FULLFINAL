@@ -12,7 +12,7 @@ import slowfast.utils.checkpoint as cu
 import slowfast.utils.distributed as du
 import slowfast.utils.logging as logging
 import slowfast.utils.misc as misc
-import slowfast.visualization.tensorboard_vis as tb
+# import slowfast.visualization.tensorboard_vis as tb
 import torch
 from slowfast.datasets import loader
 from slowfast.models import build_model
@@ -47,24 +47,17 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None):
     model.eval()
     test_meter.iter_tic()
 
-    for cur_iter, (inputs, labels, video_idx, time, meta) in enumerate(test_loader):
-
+    for cur_iter, batch in enumerate(test_loader):
+        inputs, labels, video_idx, time, meta = misc._unpack_batch(batch)
         if cfg.NUM_GPUS:
             # Transfer the data to the current GPU device.
-            if isinstance(inputs, (list,)):
-                for i in range(len(inputs)):
-                    inputs[i] = inputs[i].cuda(non_blocking=True)
-            else:
-                inputs = inputs.cuda(non_blocking=True)
+
+            inputs = misc._recursive_to_cuda(inputs)
             # Transfer the data to the current GPU device.
-            labels = labels.cuda()
-            video_idx = video_idx.cuda()
-            for key, val in meta.items():
-                if isinstance(val, (list,)):
-                    for i in range(len(val)):
-                        val[i] = val[i].cuda(non_blocking=True)
-                else:
-                    meta[key] = val.cuda(non_blocking=True)
+            labels = misc._recursive_to_cuda(labels)
+            video_idx = misc._recursive_to_cuda(video_idx)
+            time = misc._recursive_to_cuda(time)
+            meta = misc._recursive_to_cuda(meta)
         test_meter.data_toc()
 
         if cfg.DETECTION.ENABLE:

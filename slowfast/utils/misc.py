@@ -35,6 +35,34 @@ def check_nan_losses(loss):
     if math.isnan(loss):
         raise RuntimeError("ERROR: Got NaN losses {}".format(datetime.now()))
 
+def _recursive_to_cuda(x):
+    if torch.is_tensor(x):
+        return x.cuda(non_blocking=True)
+    if isinstance(x, dict):
+        return {k: _recursive_to_cuda(v) for k, v in x.items()}
+    if isinstance(x, list):
+        return [_recursive_to_cuda(v) for v in x]
+    if isinstance(x, tuple):
+        return tuple(_recursive_to_cuda(v) for v in x)
+    return x
+
+
+def _input_batch_size(inputs):
+    if isinstance(inputs, dict):
+        return _input_batch_size(next(iter(inputs.values())))
+    if isinstance(inputs, list):
+        return inputs[0][0].size(0) if isinstance(inputs[0], list) else inputs[0].size(0)
+    return inputs.size(0)
+
+
+def _unpack_batch(batch):
+    if len(batch) == 5:
+        return batch
+    if len(batch) == 4:
+        inputs, labels, index, meta = batch
+        time = None
+        return inputs, labels, index, time, meta
+    raise ValueError("Expected a 4- or 5-item batch, got {} items.".format(len(batch)))
 
 def params_count(model, ignore_bn=False):
     """
@@ -76,6 +104,10 @@ def cpu_mem_usage():
     total = vram.total / 1024**3
 
     return usage, total
+
+
+
+
 
 
 def _get_model_analysis_input(cfg, use_train_input):
@@ -120,6 +152,20 @@ def _get_model_analysis_input(cfg, use_train_input):
                 cfg.DATA.TEST_CROP_SIZE,
                 cfg.DATA.TEST_CROP_SIZE,
             )
+    
+    if (
+        cfg.MODEL.MODEL_NAME == "M2MVT"
+        or cfg.TRAIN.DATASET.lower() == "daad"
+        or cfg.TEST.DATASET.lower() == "daad"
+    ):
+        model_inputs = {
+            view: input_tensors.unsqueeze(0)
+            for view in ["driver", "front", "left", "right", "rear", "ariagaze"]
+        }
+        if cfg.NUM_GPUS:
+            model_inputs = _recursive_to_cuda(model_inputs)
+        return (model_inputs,)
+
     model_inputs = pack_pathway_output(cfg, input_tensors)
     for i in range(len(model_inputs)):
         model_inputs[i] = model_inputs[i].unsqueeze(0)

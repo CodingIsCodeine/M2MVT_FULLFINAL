@@ -14,7 +14,7 @@ import torch.nn.functional as F
 from slowfast.models.attention import MultiScaleBlock
 from slowfast.models.batchnorm_helper import get_norm
 from slowfast.models.common import TwoStreamFusion
-from slowfast.models.reversible_mvit import ReversibleMViT
+from slowfast.models.rev_mvit import ReversibleMViT
 from slowfast.models.utils import (
     calc_mvit_feature_geometry,
     get_3d_sincos_pos_embed,

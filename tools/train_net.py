@@ -15,7 +15,9 @@ import slowfast.utils.distributed as du
 import slowfast.utils.logging as logging
 import slowfast.utils.metrics as metrics
 import slowfast.utils.misc as misc
-import slowfast.visualization.tensorboard_vis as tb
+print("TRAIN_NET misc =", misc.__file__)
+print("TRAIN_NET has _unpack_batch =", hasattr(misc, "_unpack_batch"))
+# import slowfast.visualization.tensorboard_vis as tb
 import torch
 from fvcore.nn.precise_bn import get_bn_modules, update_bn_stats
 from slowfast.datasets import loader
@@ -75,32 +77,18 @@ def train_epoch(
     # Explicitly declare reduction to mean.
     loss_fun = losses.get_loss_func(cfg.MODEL.LOSS_FUNC)(reduction="mean")
 
-    for cur_iter, (inputs, labels, index, time, meta) in enumerate(train_loader):
+    for cur_iter, batch in enumerate(train_loader):
+        inputs, labels, index, time, meta = misc._unpack_batch(batch)
         # Transfer the data to the current GPU device.
         if cfg.NUM_GPUS:
-            if isinstance(inputs, (list,)):
-                for i in range(len(inputs)):
-                    if isinstance(inputs[i], (list,)):
-                        for j in range(len(inputs[i])):
-                            inputs[i][j] = inputs[i][j].cuda(non_blocking=True)
-                    else:
-                        inputs[i] = inputs[i].cuda(non_blocking=True)
-            else:
-                inputs = inputs.cuda(non_blocking=True)
-            if not isinstance(labels, list):
-                labels = labels.cuda(non_blocking=True)
-                index = index.cuda(non_blocking=True)
-                time = time.cuda(non_blocking=True)
-            for key, val in meta.items():
-                if isinstance(val, (list,)):
-                    for i in range(len(val)):
-                        val[i] = val[i].cuda(non_blocking=True)
-                else:
-                    meta[key] = val.cuda(non_blocking=True)
+            inputs = misc._recursive_to_cuda(inputs)
+            labels = misc._recursive_to_cuda(labels)
+            index = misc._recursive_to_cuda(index)
+            time = misc._recursive_to_cuda(time)
+            meta = misc._recursive_to_cuda(meta)
 
-        batch_size = (
-            inputs[0][0].size(0) if isinstance(inputs[0], list) else inputs[0].size(0)
-        )
+        batch_size = misc._input_batch_size(inputs)
+
         # Update the learning rate.
         epoch_exact = cur_epoch + float(cur_iter) / data_size
         lr = optim.get_epoch_lr(epoch_exact, cfg)
@@ -108,8 +96,19 @@ def train_epoch(
 
         train_meter.data_toc()
         if cfg.MIXUP.ENABLE:
-            samples, labels = mixup_fn(inputs[0], labels)
-            inputs[0] = samples
+            if isinstance(inputs, dict):
+                rng_state = np.random.get_state()
+                mixed_labels = None
+                for key in inputs:
+                    np.random.set_state(rng_state)
+                    inputs[key], cur_labels = mixup_fn(inputs[key], labels)
+                    if mixed_labels is None:
+                        mixed_labels = cur_labels
+                labels = mixed_labels
+            else:
+                samples, labels = mixup_fn(inputs[0], labels)
+                inputs[0] = samples
+
 
         with torch.cuda.amp.autocast(enabled=cfg.TRAIN.MIXED_PRECISION):
 
@@ -132,6 +131,7 @@ def train_epoch(
             elif cfg.MASK.ENABLE:
                 preds, labels = model(inputs)
             else:
+                # print(inputs["driver"].shape)
                 preds = model(inputs)
             if cfg.TASK == "ssl" and cfg.MODEL.MODEL_NAME == "ContrastiveModel":
                 labels = torch.zeros(
@@ -437,11 +437,8 @@ def calculate_and_update_precise_bn(loader, model, num_iters=200, use_gpu=True):
     def _gen_loader():
         for inputs, *_ in loader:
             if use_gpu:
-                if isinstance(inputs, (list,)):
-                    for i in range(len(inputs)):
-                        inputs[i] = inputs[i].cuda(non_blocking=True)
-                else:
-                    inputs = inputs.cuda(non_blocking=True)
+                inputs = misc._recursive_to_cuda(inputs)
+
             yield inputs
 
     # Update the bn stats.
@@ -528,7 +525,7 @@ def train(cfg):
     # Construct the optimizer.
     optimizer = optim.construct_optimizer(model, cfg)
     # Create a GradScaler for mixed precision training
-    scaler = torch.cuda.amp.GradScaler(enabled=cfg.TRAIN.MIXED_PRECISION)
+    scaler = torch.amp.GradScaler('cuda', enabled=cfg.TRAIN.MIXED_PRECISION)
 
     # Load a checkpoint to resume training if applicable.
     if cfg.TRAIN.AUTO_RESUME and cu.has_checkpoint(cfg.OUTPUT_DIR):

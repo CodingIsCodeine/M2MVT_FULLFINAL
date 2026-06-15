@@ -2,13 +2,13 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
 """Wrapper to train and test a video classification model."""
-from demo_net import demo
+# from demo_net import demo
 from slowfast.config.defaults import assert_and_infer_cfg
 from slowfast.utils.misc import launch_job
 from slowfast.utils.parser import load_config, parse_args
 from test_net import test
 from train_net import train
-from visualization import visualize
+# from visualization import visualize
 
 
 def main():
@@ -42,8 +42,8 @@ def main():
             launch_job(cfg=cfg, init_method=args.init_method, func=visualize)
 
         # Run demo.
-        if cfg.DEMO.ENABLE:
-            demo(cfg)
+        # if cfg.DEMO.ENABLE:
+        #     demo(cfg)
 
 
 if __name__ == "__main__":
