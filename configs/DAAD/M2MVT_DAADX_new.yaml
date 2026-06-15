@@ -33,11 +33,11 @@ TEST:
 # ─── Data ─────────────────────────────────────────────────────────────────── #
 DATA:
   PATH_TO_DATA_DIR: /scratch/hriday.samdani/daadx      # override on CLI
-  NUM_FRAMES: 16
+  NUM_FRAMES: 8
   SAMPLING_RATE: 4
-  TRAIN_JITTER_SCALES: [256, 320]
-  TRAIN_CROP_SIZE: 224
-  TEST_CROP_SIZE: 224
+  TRAIN_JITTER_SCALES: [128, 160]
+  TRAIN_CROP_SIZE: 112
+  TEST_CROP_SIZE: 112
   INPUT_CHANNEL_NUM: [3]                 # per-stream; early fusion handled in model
   MEAN: [0.45, 0.45, 0.45]
   STD:  [0.225, 0.225, 0.225]
@@ -68,7 +68,7 @@ MVIT:
   QKV_BIAS: True
   DROPOUT_RATE: 0.0
   DROPPATH_RATE: 0.2
-  DEPTH: 16
+  DEPTH: 8
   NORM: layernorm
   NORM_STEM: False
   PATCH_KERNEL: [3, 7, 7]
