@@ -8,7 +8,18 @@ from functools import partial
 import torch
 import torch.nn as nn
 
-from pytorchvideo.losses.soft_target_cross_entropy import SoftTargetCrossEntropyLoss
+try:
+    from pytorchvideo.losses.soft_target_cross_entropy import SoftTargetCrossEntropyLoss
+except ImportError:
+    class SoftTargetCrossEntropyLoss(nn.Module):
+        def __init__(self, normalize_targets=False, reduction="mean"):
+            super().__init__()
+            self.reduction = reduction
+
+        def forward(self, x, target):
+            log_probs = torch.nn.functional.log_softmax(x, dim=1)
+            loss = -(target * log_probs).sum(dim=1)
+            return loss.mean() if self.reduction == "mean" else loss
 
 
 class ContrastiveLoss(nn.Module):

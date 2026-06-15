@@ -22,7 +22,7 @@ from .build import DATASET_REGISTRY
 
 logger = logging.get_logger(__name__)
 
-_VIEWS = ("driver", "front", "left", "right", "rear", "ariagaze")
+_VIEWS = ("driver", "front", "left", "right", "rear", "aria_gaze")
 _NUM_CLASSES = 7
 
 
