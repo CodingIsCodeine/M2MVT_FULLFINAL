@@ -303,9 +303,14 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, train_loader, write
         inputs, labels, index, time, meta = misc._unpack_batch(batch)
         if cfg.NUM_GPUS:
             # Transferthe data to the current GPU device.
-            if isinstance(inputs, (list,)):
+            if isinstance(inputs, dict):
+                for k in inputs:
+                    inputs[k] = inputs[k].cuda(non_blocking=True)
+
+            elif isinstance(inputs, (list,)):
                 for i in range(len(inputs)):
                     inputs[i] = inputs[i].cuda(non_blocking=True)
+
             else:
                 inputs = inputs.cuda(non_blocking=True)
             labels = labels.cuda()
