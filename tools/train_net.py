@@ -315,13 +315,18 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, train_loader, write
                 inputs = inputs.cuda(non_blocking=True)
             labels = labels.cuda()
             for key, val in meta.items():
-                if isinstance(val, (list,)):
+
+                if isinstance(val, list):
                     for i in range(len(val)):
-                        val[i] = val[i].cuda(non_blocking=True)
-                else:
+                        if torch.is_tensor(val[i]):
+                            val[i] = val[i].cuda(non_blocking=True)
+
+                elif torch.is_tensor(val):
                     meta[key] = val.cuda(non_blocking=True)
             index = index.cuda()
-            time = time.cuda()
+
+            if time is not None and torch.is_tensor(time):
+                time = time.cuda()
         batch_size = (
             inputs[0][0].size(0) if isinstance(inputs[0], list) else inputs[0].size(0)
         )
