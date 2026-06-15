@@ -327,9 +327,7 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, train_loader, write
 
             if time is not None and torch.is_tensor(time):
                 time = time.cuda()
-        batch_size = (
-            inputs[0][0].size(0) if isinstance(inputs[0], list) else inputs[0].size(0)
-        )
+        batch_size = misc._input_batch_size(inputs)
         val_meter.data_toc()
 
         if cfg.DETECTION.ENABLE:
