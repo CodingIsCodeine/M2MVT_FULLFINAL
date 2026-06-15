@@ -296,8 +296,11 @@ class Daad(torch.utils.data.Dataset):
                     )
 
                 label = self._labels[index]
-                metadata = {"video_id": self._video_ids[index]}
-                return inputs, label, index, metadata
+                metadata = {
+                    "video_id": self._video_ids[index],
+                    "time_idx": time_idx,
+                }
+                return inputs, label, index, time_idx, metadata
 
             except Exception as err:
                 logger.warning(
