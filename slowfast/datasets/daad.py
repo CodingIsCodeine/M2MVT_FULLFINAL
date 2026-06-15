@@ -70,7 +70,8 @@ class Daad(torch.utils.data.Dataset):
 
     def _construct_loader(self):
         annotation_file = os.path.join(
-            self.cfg.DATA.PATH_TO_DATA_DIR, "annotations", "{}.csv".format(self.mode)
+            "/kaggle/working/daad_clean_annotations",
+            "{}.csv".format(self.mode)
         )
         assert pathmgr.exists(annotation_file), "{} not found".format(annotation_file)
 
@@ -109,7 +110,7 @@ class Daad(torch.utils.data.Dataset):
 
                 filename = _with_mp4_suffix(video_id)
                 paths = {
-                    view: os.path.join(self.cfg.DATA.PATH_TO_DATA_DIR, view,"videos","dipx_blurred", filename)
+                    view: os.path.join( self.cfg.DATA.PATH_TO_DATA_DIR, "videos", "dipx_blurred", view, filename)
                     for view in _VIEWS
                 }
                 missing = [path for path in paths.values() if not pathmgr.exists(path)]
