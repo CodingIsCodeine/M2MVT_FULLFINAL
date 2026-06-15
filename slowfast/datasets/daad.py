@@ -109,7 +109,7 @@ class Daad(torch.utils.data.Dataset):
 
                 filename = _with_mp4_suffix(video_id)
                 paths = {
-                    view: os.path.join(self.cfg.DATA.PATH_TO_DATA_DIR, view, filename)
+                    view: os.path.join(self.cfg.DATA.PATH_TO_DATA_DIR, view,"videos","dipx_blurred", filename)
                     for view in _VIEWS
                 }
                 missing = [path for path in paths.values() if not pathmgr.exists(path)]
