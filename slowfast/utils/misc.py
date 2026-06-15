@@ -32,7 +32,7 @@ def check_nan_losses(loss):
     Args:
         loss (loss): loss to check whether is NaN.
     """
-    if math.isnan(loss):
+    if torch.isnan(loss.detach()):
         raise RuntimeError("ERROR: Got NaN losses {}".format(datetime.now()))
 
 def _recursive_to_cuda(x):
