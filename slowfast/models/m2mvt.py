@@ -275,6 +275,10 @@ class M2MVT(nn.Module):
         super().__init__()
         self.cfg = cfg
         self.encoder = MViT(cfg)
+        import torch.nn as nn
+
+        self.encoder.patch_embed = nn.Identity()
+        self.encoder.head = nn.Identity()
         assert not self.encoder.enable_detection, "M2MVT supports classification only."
         assert not self.encoder.enable_rev, "M2MVT expects the non-reversible MViT path."
 
