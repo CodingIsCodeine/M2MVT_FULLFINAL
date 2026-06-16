@@ -430,7 +430,9 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, train_loader, write
                 all_labels = [label.cpu() for label in all_labels]
             writer.plot_eval(preds=all_preds, labels=all_labels, global_step=cur_epoch)
 
+    current_top1_err = val_meter.num_top1_mis / val_meter.num_samples
     val_meter.reset()
+    return current_top1_err
 
 
 def calculate_and_update_precise_bn(loader, model, num_iters=200, use_gpu=True):
@@ -513,6 +515,7 @@ def train(cfg):
 
     # Setup logging format.
     logging.setup_logging(cfg.OUTPUT_DIR)
+    best_top1_err = float("inf")
 
     # Init multigrid.
     multigrid = None
@@ -730,7 +733,7 @@ def train(cfg):
             )
         # Evaluate the model on validation set.
         if is_eval_epoch:
-            eval_epoch(
+            current_top1_err = eval_epoch(
                 val_loader,
                 model,
                 val_meter,
@@ -739,6 +742,25 @@ def train(cfg):
                 train_loader,
                 writer,
             )
+
+            if current_top1_err < best_top1_err:
+                best_top1_err = current_top1_err
+
+                logger.info(
+                    f"New best model! top1_err={current_top1_err:.4f}"
+                )
+
+                cu.save_best_checkpoint(
+                    cfg.OUTPUT_DIR,
+                    model,
+                    optimizer,
+                    cur_epoch,
+                    cfg,
+                    scaler if cfg.TRAIN.MIXED_PRECISION else None,
+                )
+
+
+
     if (
         start_epoch == cfg.SOLVER.MAX_EPOCH and not cfg.MASK.ENABLE
     ):  # final checkpoint load

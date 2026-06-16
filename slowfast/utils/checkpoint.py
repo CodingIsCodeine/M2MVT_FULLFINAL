@@ -145,6 +145,47 @@ def save_checkpoint(path_to_job, model, optimizer, epoch, cfg, scaler=None):
         torch.save(checkpoint, f)
     return path_to_checkpoint
 
+def save_best_checkpoint(
+    path_to_job,
+    model,
+    optimizer,
+    epoch,
+    cfg,
+    scaler=None,
+):
+    """
+    Save the current model as best_model.pyth.
+    """
+
+    if not du.is_master_proc(cfg.NUM_GPUS * cfg.NUM_SHARDS):
+        return
+
+    pathmgr.mkdirs(get_checkpoint_dir(path_to_job))
+
+    sd = model.module.state_dict() if cfg.NUM_GPUS > 1 else model.state_dict()
+    normalized_sd = sub_to_normal_bn(sd)
+
+    checkpoint = {
+        "epoch": epoch,
+        "model_state": normalized_sd,
+        "optimizer_state": optimizer.state_dict(),
+        "cfg": cfg.dump(),
+    }
+
+    if scaler is not None:
+        checkpoint["scaler_state"] = scaler.state_dict()
+
+    path_to_checkpoint = os.path.join(
+        get_checkpoint_dir(path_to_job),
+        "best_model.pyth",
+    )
+
+    with pathmgr.open(path_to_checkpoint, "wb") as f:
+        torch.save(checkpoint, f)
+
+    return path_to_checkpoint
+
+
 
 def inflate_weight(state_dict_2d, state_dict_3d):
     """

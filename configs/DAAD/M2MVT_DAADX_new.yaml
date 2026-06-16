@@ -16,9 +16,9 @@
 TRAIN:
   ENABLE: True
   DATASET: daad          # lower-cased; matched to Daad class by DATASET_REGISTRY
-  BATCH_SIZE: 1           # per-GPU; effective batch = BATCH_SIZE × NUM_GPUS
+  BATCH_SIZE: 2           # per-GPU; effective batch = BATCH_SIZE × NUM_GPUS
   EVAL_PERIOD: 1
-  CHECKPOINT_PERIOD: 1
+  CHECKPOINT_PERIOD: 5
   AUTO_RESUME: False
   MIXED_PRECISION: True
 
@@ -26,7 +26,7 @@ TRAIN:
 TEST:
   ENABLE: True
   DATASET: daad
-  BATCH_SIZE: 1
+  BATCH_SIZE: 2
   NUM_ENSEMBLE_VIEWS: 1
   NUM_SPATIAL_CROPS: 1
 
@@ -118,7 +118,7 @@ AUG:
   ENABLE: False
 
 # ─── Distributed / hardware ───────────────────────────────────────────────── #
-NUM_GPUS: 1
+NUM_GPUS: 2
 NUM_SHARDS: 1
 RNG_SEED: 0
 OUTPUT_DIR: /scratch/hriday.samdani/m2mvt_debug_run
@@ -128,7 +128,7 @@ LOG_PERIOD: 20
 LOG_MODEL_INFO: False
 
 DATA_LOADER:
-  NUM_WORKERS: 4
+  NUM_WORKERS: 8
 
 MIXUP:
   ENABLE: False
