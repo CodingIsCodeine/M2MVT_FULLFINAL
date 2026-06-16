@@ -61,6 +61,8 @@ def build_model(cfg, gpu_id=None):
         # Transfer the model to the current GPU device
         model = model.cuda(device=cur_device)
     # Use multi-process data parallel model in the multi-gpu setting
+    for idx, (name, param) in enumerate(model.named_parameters()):
+        print(idx, name, param.shape)
     if cfg.NUM_GPUS > 1:
         # Make model replica operate on the current device
         model = torch.nn.parallel.DistributedDataParallel(

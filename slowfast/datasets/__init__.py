@@ -12,4 +12,4 @@ from .ssv2 import Ssv2  # noqa
 try:
     from .ptv_datasets import Ptvcharades, Ptvkinetics, Ptvssv2  # noqa
 except Exception:
-    print("Please update your PyTorchVideo to latest master")
+    pass
