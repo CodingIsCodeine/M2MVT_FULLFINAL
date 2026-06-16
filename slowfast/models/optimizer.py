@@ -89,14 +89,7 @@ def construct_optimizer(model, cfg):
             len(no_grad_parameters),
             len(list(model.parameters())),
         )
-        print(
-            "bn {}, non bn {}, zero {}, no grad {}".format(
-                len(bn_parameters),
-                len(non_bn_parameters),
-                len(zero_parameters),
-                len(no_grad_parameters),
-            )
-        )
+
     else:
         raise ValueError(
             "Layer decay should be in (0, 1], but is {}".format(cfg.SOLVER.LAYER_DECAY)
@@ -226,13 +219,7 @@ def get_param_groups(model, cfg):
         no_grad_parameters_count,
         len(list(model.parameters())),
     )
-    print(
-        "non bn {}, zero {}, no grad {}".format(
-            non_bn_parameters_count,
-            zero_parameters_count,
-            no_grad_parameters_count,
-        )
-    )
+
 
     return optim_params
 

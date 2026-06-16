@@ -15,8 +15,8 @@ import slowfast.utils.distributed as du
 import slowfast.utils.logging as logging
 import slowfast.utils.metrics as metrics
 import slowfast.utils.misc as misc
-print("TRAIN_NET misc =", misc.__file__)
-print("TRAIN_NET has _unpack_batch =", hasattr(misc, "_unpack_batch"))
+# print("TRAIN_NET misc =", misc.__file__)
+# print("TRAIN_NET has _unpack_batch =", hasattr(misc, "_unpack_batch"))
 # import slowfast.visualization.tensorboard_vis as tb
 import torch
 from fvcore.nn.precise_bn import get_bn_modules, update_bn_stats
