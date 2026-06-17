@@ -2,43 +2,59 @@
 # M²MVT  –  Multi-View Multi-Memory Video Transformer
 # Config for DAAD-X driving manoeuvre anticipation dataset
 #
-# Baseline: MViT-S (16×4, 224²)  –  two independent encoder copies
-#   • Multi-view branch  : 5-stream early fusion, 10 memory tokens
-#   • Ego branch         : single stream,          2 memory tokens
+# Override on CLI:
+#   # Kaggle 2×T4
+#   python tools/run_net.py --cfg configs/DAAD/M2MVT_DAADX_new.yaml \
+#       NUM_GPUS 2 \
+#       DATA.PATH_TO_DATA_DIR /kaggle/input/daadx \
+#       DATA.ANNOTATION_DIR /kaggle/working/daad_clean_annotations \
+#       OUTPUT_DIR /kaggle/working/m2mvt_run \
+#       TRAIN.BATCH_SIZE 4 \
+#       DATA_LOADER.NUM_WORKERS 2 \
+#       DATA_LOADER.PERSISTENT_WORKERS True
 #
-# Usage:
-#   python tools/run_net.py \
-#       --cfg configs/Kinetics/M2MVT_DAADX.yaml \
-#       DATA.PATH_TO_DATA_DIR /path/to/daadx
+#   # Local 4×GTX 1080 Ti
+#   python tools/run_net.py --cfg configs/DAAD/M2MVT_DAADX_new.yaml \
+#       NUM_GPUS 4 \
+#       DATA.PATH_TO_DATA_DIR /scratch/hriday.samdani/daadx \
+#       DATA.ANNOTATION_DIR /scratch/hriday.samdani/daadx/annotations \
+#       OUTPUT_DIR /scratch/hriday.samdani/m2mvt_run \
+#       TRAIN.BATCH_SIZE 4 \
+#       DATA_LOADER.NUM_WORKERS 4 \
+#       DATA_LOADER.PERSISTENT_WORKERS True
 # ============================================================================
 
 # ─── Training ────────────────────────────────────────────────────────────── #
 TRAIN:
   ENABLE: True
-  DATASET: daad          # lower-cased; matched to Daad class by DATASET_REGISTRY
-  BATCH_SIZE: 2           # per-GPU; effective batch = BATCH_SIZE × NUM_GPUS
+  DATASET: daad
+  BATCH_SIZE: 4           # global; per-GPU = BATCH_SIZE / NUM_GPUS
   EVAL_PERIOD: 1
-  CHECKPOINT_PERIOD: 5
-  AUTO_RESUME: False
+  CHECKPOINT_PERIOD: 5   # save every 5th epoch + final epoch + best
+  AUTO_RESUME: True
   MIXED_PRECISION: True
 
 # ─── Test ─────────────────────────────────────────────────────────────────── #
 TEST:
   ENABLE: True
   DATASET: daad
-  BATCH_SIZE: 2
+  BATCH_SIZE: 4
   NUM_ENSEMBLE_VIEWS: 1
   NUM_SPATIAL_CROPS: 1
 
 # ─── Data ─────────────────────────────────────────────────────────────────── #
 DATA:
-  PATH_TO_DATA_DIR: /scratch/hriday.samdani/daadx      # override on CLI
+  # Root of the DAAD-X dataset.  Override on CLI for each environment.
+  PATH_TO_DATA_DIR: /scratch/hriday.samdani/daadx
+  # Directory holding train.csv / val.csv / test.csv.
+  # If empty, falls back to PATH_TO_DATA_DIR/annotations.
+  ANNOTATION_DIR: ""
   NUM_FRAMES: 8
   SAMPLING_RATE: 4
   TRAIN_JITTER_SCALES: [128, 160]
   TRAIN_CROP_SIZE: 112
   TEST_CROP_SIZE: 112
-  INPUT_CHANNEL_NUM: [3]                 # per-stream; early fusion handled in model
+  INPUT_CHANNEL_NUM: [3]
   MEAN: [0.45, 0.45, 0.45]
   STD:  [0.225, 0.225, 0.225]
   RANDOM_FLIP: True
@@ -46,21 +62,18 @@ DATA:
 
 # ─── Model ────────────────────────────────────────────────────────────────── #
 MODEL:
-  MODEL_NAME: M2MVT          # registered in MODEL_REGISTRY
-  NUM_CLASSES: 7             # DAAD-X manoeuvre classes (adjust as needed)
+  MODEL_NAME: M2MVT
+  NUM_CLASSES: 7
   ARCH: mvit
   DROPOUT_RATE: 0.1
   HEAD_ACT: softmax
-  ACT_CHECKPOINT: False      # set True to trade memory for compute
+  ACT_CHECKPOINT: False
 
-# ─── MViT backbone (shared config for BOTH encoder copies) ────────────────── #
-# These settings define MViT-S/16×4.  Both mv_branch and ego_branch are
-# constructed from an identical cfg.MVIT; M2MVT.py clones the cfg and
-# adjusts only INPUT_CHANNEL_NUM for the multi-view copy.
+# ─── MViT backbone ────────────────────────────────────────────────────────── #
 MVIT:
   MODE: conv
-  CLS_EMBED_ON: True         # required: M²MVT reads the CLS token
-  USE_MEAN_POOLING: False    # we use CLS, not mean pool
+  CLS_EMBED_ON: True
+  USE_MEAN_POOLING: False
   PATCH_2D: False
   EMBED_DIM: 96
   NUM_HEADS: 1
@@ -96,11 +109,6 @@ MVIT:
     ENABLE: False
     RESPATH_FUSE: concat
 
-# ─── M²MVT-specific hyper-parameters ─────────────────────────────────────── #
-# M2MVT:
-#   MEM_MV: 10          # episodic memory tokens for multi-view branch
-#   MEM_EGO: 2          # episodic memory tokens for ego branch
-
 # ─── Solver ───────────────────────────────────────────────────────────────── #
 SOLVER:
   BASE_LR: 0.0001
@@ -113,25 +121,30 @@ SOLVER:
   WARMUP_START_LR: 1.6e-6
   COSINE_AFTER_WARMUP: True
   COSINE_END_LR: 1.6e-6
-  
+
 AUG:
   ENABLE: False
-
-# ─── Distributed / hardware ───────────────────────────────────────────────── #
-NUM_GPUS: 2
-NUM_SHARDS: 1
-RNG_SEED: 0
-OUTPUT_DIR: /scratch/hriday.samdani/m2mvt_debug_run
-
-# ─── Logging ──────────────────────────────────────────────────────────────── #
-LOG_PERIOD: 20
-LOG_MODEL_INFO: False
-
-DATA_LOADER:
-  NUM_WORKERS: 4
 
 MIXUP:
   ENABLE: False
 
+# ─── Distributed / hardware ───────────────────────────────────────────────── #
+# Default: single-machine 2-GPU.  Override NUM_GPUS on CLI.
+NUM_GPUS: 2
+NUM_SHARDS: 1
+RNG_SEED: 0
+OUTPUT_DIR: /scratch/hriday.samdani/m2mvt_run
 
-  
+# ─── Data loader ──────────────────────────────────────────────────────────── #
+DATA_LOADER:
+  # Workers use spawn (set in loader.py) for PyAV fork-safety.
+  NUM_WORKERS: 4
+  PIN_MEMORY: True
+  # Keep workers alive across epochs – avoids re-spawn overhead.
+  PERSISTENT_WORKERS: True
+  # Batches to prefetch per worker.
+  PREFETCH_FACTOR: 2
+
+# ─── Logging ──────────────────────────────────────────────────────────────── #
+LOG_PERIOD: 20
+LOG_MODEL_INFO: False

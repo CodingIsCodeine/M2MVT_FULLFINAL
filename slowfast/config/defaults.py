@@ -661,6 +661,10 @@ _C.DATA.PATH_LABEL_SEPARATOR = " "
 # Video path prefix if any.
 _C.DATA.PATH_PREFIX = ""
 
+# Directory containing train.csv / val.csv / test.csv annotation files.
+# If empty, defaults to DATA.PATH_TO_DATA_DIR/annotations.
+_C.DATA.ANNOTATION_DIR = ""
+
 # The number of frames of the input clip.
 _C.DATA.NUM_FRAMES = 8
 
@@ -938,6 +942,12 @@ _C.DATA_LOADER.PIN_MEMORY = True
 
 # Enable multi thread decoding.
 _C.DATA_LOADER.ENABLE_MULTI_THREAD_DECODE = False
+
+# Keep worker processes alive across epochs (avoids re-spawn cost).
+_C.DATA_LOADER.PERSISTENT_WORKERS = False
+
+# Number of batches loaded in advance per worker (None = PyTorch default=2).
+_C.DATA_LOADER.PREFETCH_FACTOR = 2
 
 
 # ---------------------------------------------------------------------------- #

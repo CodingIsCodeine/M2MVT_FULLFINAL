@@ -70,10 +70,12 @@ class Daad(torch.utils.data.Dataset):
         self._construct_loader()
 
     def _construct_loader(self):
-        annotation_file = os.path.join(
-            "/kaggle/working/daad_clean_annotations",
-            "{}.csv".format(self.mode)
+        ann_dir = (
+            cfg.DATA.ANNOTATION_DIR
+            if cfg.DATA.ANNOTATION_DIR
+            else os.path.join(cfg.DATA.PATH_TO_DATA_DIR, "annotations")
         )
+        annotation_file = os.path.join(ann_dir, "{}.csv".format(self.mode))
         assert pathmgr.exists(annotation_file), "{} not found".format(annotation_file)
 
         self._video_ids = []

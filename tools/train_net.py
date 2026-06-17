@@ -515,8 +515,6 @@ def train(cfg):
 
     # Setup logging format.
     logging.setup_logging(cfg.OUTPUT_DIR)
-    best_top1_err = float("inf")
-
     # Init multigrid.
     multigrid = None
     if cfg.MULTIGRID.LONG_CYCLE or cfg.MULTIGRID.SHORT_CYCLE:
@@ -539,6 +537,9 @@ def train(cfg):
     # Create a GradScaler for mixed precision training
     scaler = torch.amp.GradScaler('cuda', enabled=cfg.TRAIN.MIXED_PRECISION)
 
+    # best_top1_err is tracked across the full training run, including resumes.
+    best_top1_err = float("inf")
+
     # Load a checkpoint to resume training if applicable.
     if cfg.TRAIN.AUTO_RESUME and cu.has_checkpoint(cfg.OUTPUT_DIR):
         logger.info("Load from last checkpoint.")
@@ -552,6 +553,7 @@ def train(cfg):
                 scaler if cfg.TRAIN.MIXED_PRECISION else None,
             )
             start_epoch = checkpoint_epoch + 1
+            best_top1_err = cu.get_checkpoint_best_err(last_checkpoint)
         elif "ssl_eval" in cfg.TASK:
             last_checkpoint = cu.get_last_checkpoint(cfg.OUTPUT_DIR, task="ssl")
             checkpoint_epoch = cu.load_checkpoint(
@@ -730,6 +732,7 @@ def train(cfg):
                 cur_epoch,
                 cfg,
                 scaler if cfg.TRAIN.MIXED_PRECISION else None,
+                best_top1_err=best_top1_err,
             )
         # Evaluate the model on validation set.
         if is_eval_epoch:

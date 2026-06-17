@@ -114,15 +114,35 @@ def construct_loader(cfg, split, is_precise_bn=False):
     # Construct the dataset
     dataset = build_dataset(dataset_name, cfg, split)
 
+    # ── worker-safety: PyAV (libav) is not fork-safe; use spawn so workers
+    # start clean without inheriting the parent's libav / CUDA state.
+    _num_workers = cfg.DATA_LOADER.NUM_WORKERS
+    _mp_ctx = "spawn" if _num_workers > 0 else None
+    _persistent = (
+        getattr(cfg.DATA_LOADER, "PERSISTENT_WORKERS", False)
+        and _num_workers > 0
+    )
+    _prefetch = (
+        getattr(cfg.DATA_LOADER, "PREFETCH_FACTOR", 2)
+        if _num_workers > 0
+        else None
+    )
+    _shared_kw = dict(
+        num_workers=_num_workers,
+        pin_memory=cfg.DATA_LOADER.PIN_MEMORY,
+        worker_init_fn=utils.loader_worker_init_fn(dataset),
+        multiprocessing_context=_mp_ctx,
+        persistent_workers=_persistent,
+        prefetch_factor=_prefetch,
+    )
+
     if isinstance(dataset, torch.utils.data.IterableDataset):
         loader = torch.utils.data.DataLoader(
             dataset,
             batch_size=batch_size,
-            num_workers=cfg.DATA_LOADER.NUM_WORKERS,
-            pin_memory=cfg.DATA_LOADER.PIN_MEMORY,
             drop_last=drop_last,
             collate_fn=detection_collate if cfg.DETECTION.ENABLE else None,
-            worker_init_fn=utils.loader_worker_init_fn(dataset),
+            **_shared_kw,
         )
     else:
         if cfg.MULTIGRID.SHORT_CYCLE and split in ["train"] and not is_precise_bn:
@@ -135,9 +155,7 @@ def construct_loader(cfg, split, is_precise_bn=False):
             loader = torch.utils.data.DataLoader(
                 dataset,
                 batch_sampler=batch_sampler,
-                num_workers=cfg.DATA_LOADER.NUM_WORKERS,
-                pin_memory=cfg.DATA_LOADER.PIN_MEMORY,
-                worker_init_fn=utils.loader_worker_init_fn(dataset),
+                **_shared_kw,
             )
         else:
             # Create a sampler for multi-process training
@@ -164,11 +182,9 @@ def construct_loader(cfg, split, is_precise_bn=False):
                 batch_size=batch_size,
                 shuffle=(False if sampler else shuffle),
                 sampler=sampler,
-                num_workers=cfg.DATA_LOADER.NUM_WORKERS,
-                pin_memory=cfg.DATA_LOADER.PIN_MEMORY,
                 drop_last=drop_last,
                 collate_fn=collate_func,
-                worker_init_fn=utils.loader_worker_init_fn(dataset),
+                **_shared_kw,
             )
     return loader
 
@@ -206,4 +222,4 @@ def shuffle_dataset(loader, cur_epoch):
         if isinstance(sampler, DistributedSampler):
             # DistributedSampler shuffles data based on epoch
             print("prefetcher sampler")
-            sampler.set_epoch(cur_epoch)
+            sampler.set_epoch(cur_epoch)    

@@ -111,7 +111,7 @@ def is_checkpoint_epoch(cfg, cur_epoch, multigrid_schedule=None):
     return (cur_epoch + 1) % cfg.TRAIN.CHECKPOINT_PERIOD == 0
 
 
-def save_checkpoint(path_to_job, model, optimizer, epoch, cfg, scaler=None):
+def save_checkpoint(path_to_job, model, optimizer, epoch, cfg, scaler=None, best_top1_err=None):
     """
     Save a checkpoint.
     Args:
@@ -139,11 +139,23 @@ def save_checkpoint(path_to_job, model, optimizer, epoch, cfg, scaler=None):
     }
     if scaler is not None:
         checkpoint["scaler_state"] = scaler.state_dict()
+    if best_top1_err is not None:
+        checkpoint["best_top1_err"] = best_top1_err
     # Write the checkpoint.
     path_to_checkpoint = get_path_to_checkpoint(path_to_job, epoch + 1, cfg.TASK)
     with pathmgr.open(path_to_checkpoint, "wb") as f:
         torch.save(checkpoint, f)
     return path_to_checkpoint
+
+def get_checkpoint_best_err(path_to_checkpoint):
+    """
+    Read best_top1_err stored in a checkpoint.  Returns inf if not present
+    (e.g. checkpoint was saved before this field was added).
+    """
+    with pathmgr.open(path_to_checkpoint, "rb") as f:
+        ckpt = torch.load(f, map_location="cpu")
+    return float(ckpt.get("best_top1_err", float("inf")))
+
 
 def save_best_checkpoint(
     path_to_job,
