@@ -70,6 +70,7 @@ class Daad(torch.utils.data.Dataset):
         self._construct_loader()
 
     def _construct_loader(self):
+        cfg = self.cfg
         ann_dir = (
             cfg.DATA.ANNOTATION_DIR
             if cfg.DATA.ANNOTATION_DIR
