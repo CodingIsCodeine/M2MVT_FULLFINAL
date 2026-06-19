@@ -30,7 +30,7 @@ TRAIN:
   DATASET: daad
   BATCH_SIZE: 4           # global; per-GPU = BATCH_SIZE / NUM_GPUS
   EVAL_PERIOD: 1
-  CHECKPOINT_PERIOD: 4   # save every 2nd epoch + final epoch + best
+  CHECKPOINT_PERIOD: 2   # save every 2nd epoch + final epoch + best
   AUTO_RESUME: True
   MIXED_PRECISION: True
 

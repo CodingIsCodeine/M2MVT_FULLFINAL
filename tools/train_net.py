@@ -23,10 +23,14 @@ from fvcore.nn.precise_bn import get_bn_modules, update_bn_stats
 from slowfast.datasets import loader
 from slowfast.datasets.mixup import MixUp
 from slowfast.models import build_model
-from slowfast.models.contrastive import (
-    contrastive_forward,
-    contrastive_parameter_surgery,
-)
+try:
+    from slowfast.models.contrastive import (
+        contrastive_forward,
+        contrastive_parameter_surgery,
+    )
+except ImportError:
+    contrastive_forward = None
+    contrastive_parameter_surgery = None
 from slowfast.utils.meters import AVAMeter, EpochTimer, TrainMeter, ValMeter
 from slowfast.utils.multigrid import MultigridSchedule
 
@@ -166,9 +170,12 @@ def train_epoch(
         else:
             grad_norm = optim.get_grad_norm_(model.parameters())
         # Update the parameters. (defaults to True)
-        model, update_param = contrastive_parameter_surgery(
-            model, cfg, epoch_exact, cur_iter
-        )
+        if cfg.MODEL.MODEL_NAME == "ContrastiveModel":
+            model, update_param = contrastive_parameter_surgery(
+                model, cfg, epoch_exact, cur_iter
+            )
+        else:
+            update_param = True
         if update_param:
             scaler.step(optimizer)
         scaler.update()
@@ -574,8 +581,8 @@ def train(cfg):
             cfg.TRAIN.CHECKPOINT_FILE_PATH,
             model,
             cfg.NUM_GPUS > 1,
-            optimizer,
-            scaler if cfg.TRAIN.MIXED_PRECISION else None,
+            None,
+            None,
             inflation=cfg.TRAIN.CHECKPOINT_INFLATE,
             convert_from_caffe2=cfg.TRAIN.CHECKPOINT_TYPE == "caffe2",
             epoch_reset=cfg.TRAIN.CHECKPOINT_EPOCH_RESET,

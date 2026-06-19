@@ -12,6 +12,7 @@ from .attention import get_rel_pos
 from . import stem_helper
 from .build import MODEL_REGISTRY
 from .video_model_builder import MViT
+from torch.utils.checkpoint import checkpoint as grad_ckpt
 
 
 _MV_VIEWS = ("driver", "front", "left", "right", "rear")
@@ -418,9 +419,10 @@ class M2MVT(nn.Module):
             patch_tokens = self.encoder.norm_stem(patch_tokens)
 
         for i, block in enumerate(self.encoder.blocks):
-            # print("entering block", i)
-            patch_tokens, thw = _block_forward_with_special(
-                block, patch_tokens, thw, num_special
+            patch_tokens, thw = grad_ckpt(
+                _block_forward_with_special,
+                block, patch_tokens, thw, num_special,
+                use_reentrant=False,
             )
 
         if self.encoder.use_mean_pooling:

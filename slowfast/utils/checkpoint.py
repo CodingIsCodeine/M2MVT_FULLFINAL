@@ -153,7 +153,7 @@ def get_checkpoint_best_err(path_to_checkpoint):
     (e.g. checkpoint was saved before this field was added).
     """
     with pathmgr.open(path_to_checkpoint, "rb") as f:
-        ckpt = torch.load(f, map_location="cpu")
+        ckpt = torch.load(f, map_location="cpu", weights_only=True)
     return float(ckpt.get("best_top1_err", float("inf")))
 
 
@@ -335,7 +335,7 @@ def load_checkpoint(
     else:
         # Load the checkpoint on CPU to avoid GPU mem spike.
         with pathmgr.open(path_to_checkpoint, "rb") as f:
-            checkpoint = torch.load(f, map_location="cpu")
+            checkpoint = torch.load(f, map_location="cpu", weights_only=True)
         model_state_dict_3d = (
             model.module.state_dict() if data_parallel else model.state_dict()
         )
@@ -546,7 +546,11 @@ def load_checkpoint(
                         else:
                             not_used_layers.append(k)
                 else:
-                    not_used_layers.append(k)
+                    enc_k = "encoder." + k
+                    if enc_k in model_dict and v.size() == model_dict[enc_k].size():
+                        pre_train_dict_match[enc_k] = v
+                    else:
+                        not_used_layers.append(k)
             # Weights that do not have match from the pre-trained model.
             not_load_layers = [
                 k for k in model_dict.keys() if k not in pre_train_dict_match.keys()
